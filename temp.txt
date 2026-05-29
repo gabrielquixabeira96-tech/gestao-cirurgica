@@ -1,0 +1,910 @@
+1:import "dotenv/config";
+2:import express from "express";
+3:import { createServer as createViteServer } from "vite";
+4:import Database from "better-sqlite3";
+5:import path from "path";
+6:import Papa from "papaparse";
+7:import mammoth from "mammoth";
+8:import fs from "fs";
+9:import { cleanSusCard, cleanPhone, cleanDate, cleanWords } from "./src/dataCleaner.ts";
+10:import { findBestCID } from "./src/cid10.ts";
+11:import { findBestProcedure } from "./src/procedures.ts";
+12:import { GoogleGenAI, Type } from "@google/genai";
+13:
+14:const db = new Database("patients.db");
+15:
+16:// Initialize database
+17:db.exec(`
+18:  CREATE TABLE IF NOT EXISTS patients (
+19:    id INTEGER PRIMARY KEY AUTOINCREMENT,
+20:    name TEXT NOT NULL,
+21:    sus_card TEXT NOT NULL,
+22:    diagnosis TEXT NOT NULL,
+23:    surgery_type TEXT NOT NULL,
+24:    risk_status TEXT NOT NULL,
+25:    age INTEGER DEFAULT 0,
+26:    birth_date TEXT,
+27:    phone TEXT NOT NULL,
+28:    cid_code TEXT,
+29:    category TEXT NOT NULL,
+30:    whatsapp_sent INTEGER DEFAULT 0,
+31:    aih_generated INTEGER DEFAULT 0,
+32:    aih_nir INTEGER DEFAULT 0,
+33:    uti_vacancy INTEGER DEFAULT 0,
+34:    scheduled_cc INTEGER DEFAULT 0,
+35:    doctor TEXT DEFAULT ''
+36:  )
+37:`);
+38:
+39:// Migration to add doctor column if it doesn't exist
+40:try {
+41:  db.exec("ALTER TABLE patients ADD COLUMN doctor TEXT DEFAULT ''");
+42:} catch (e) {
+43:  // Column likely already exists
+44:}
+45:
+46:// Migration to add evolution column
+47:try {
+48:  db.exec("ALTER TABLE patients ADD COLUMN evolution TEXT DEFAULT ''");
+49:} catch (e) {
+50:  // Column likely already exists
+51:}
+52:
+53:// Migration to add exam columns
+54:try {
+55:  db.exec("ALTER TABLE patients ADD COLUMN exam_pathology TEXT DEFAULT ''");
+56:} catch (e) {}
+57:try {
+58:  db.exec("ALTER TABLE patients ADD COLUMN exam_imaging TEXT DEFAULT ''");
+59:} catch (e) {}
+60:try {
+61:  db.exec("ALTER TABLE patients ADD COLUMN exam_others TEXT DEFAULT ''");
+62:} catch (e) {}
+63:
+64:// Migration to add procedure_code column
+65:try {
+66:  db.exec("ALTER TABLE patients ADD COLUMN procedure_code TEXT DEFAULT ''");
+67:} catch (e) {}
+68:
+69:// Migration to add scheduling columns
+70:try {
+71:  db.exec("ALTER TABLE patients ADD COLUMN data_internacao TEXT DEFAULT ''");
+72:} catch (e) {}
+73:try {
+74:  db.exec("ALTER TABLE patients ADD COLUMN data_cirurgia TEXT DEFAULT ''");
+75:} catch (e) {}
+76:try {
+77:  db.exec("ALTER TABLE patients ADD COLUMN horario_cirurgia TEXT DEFAULT ''");
+78:} catch (e) {}
+79:
+80:// Migration to populate missing cid_codes
+81:const patientsMissingCid = db.prepare("SELECT id, diagnosis, surgery_type FROM patients WHERE cid_code IS NULL OR cid_code = '' OR cid_code = 'N/A'").all() as { id: number, diagnosis: string, surgery_type: string }[];
+82:if (patientsMissingCid.length > 0) {
+83:  const updateCid = db.prepare("UPDATE patients SET cid_code = ? WHERE id = ?");
+84:  db.transaction(() => {
+85:    for (const p of patientsMissingCid) {
+86:      let cid = findBestCID(p.diagnosis);
+87:      if (cid === 'N/A') {
+88:        cid = findBestCID(p.surgery_type);
+89:      }
+90:      updateCid.run(cid, p.id);
+91:    }
+92:  })();
+93:  console.log(`Updated CID codes for ${patientsMissingCid.length} existing patients.`);
+94:}
+95:
+96:// Seed data if empty
+97:const count = db.prepare("SELECT COUNT(*) as count FROM patients").get() as { count: number };
+98:if (count.count === 0) {
+99:  const insert = db.prepare(`
+100:    INSERT INTO patients (name, sus_card, diagnosis, surgery_type, risk_status, age, phone, cid_code, category)
+101:    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+102:  `);
+103:  
+104:  const seedPatients = [
+105:    // Cirurgias agendadas
+106:    ["Sandra Silva de Jesus", "706306763443375", "Lobectomia inferior esquerda", "Lobectomia", "Risco ok", 54, "66996813201", "N/A", "AGENDADA"],
+107:    
+108:    // Cirurgias prioritárias
+109:    ["Maria José da Silva Santos", "705.004.242.870.650", "Câncer de ovário", "Cirurgia citoredutora", "Risco + Lab ok", 62, "82999224210", "C56", "PRIORITARIA"],
+110:    ["Rosely Chagas Daniel da Silva", "700.003.983.010.509", "Lesão anexial direita (CA125 elevado)", "Ooforectomia com congelação", "Risco ok", 48, "66984437128", "C56", "PRIORITARIA"],
+111:    
+112:    // Pacientes com pendências
+113:    ["Ana rosa de faria", "704.102.138.932.377", "Cicatriz frontoparietal D", "Ampliação de margens", "Aguarda procedimento", 59, "65996987586", "C44.3", "PENDENCIA"],
+114:    ["Maria ercy de Souza e Silva", "700.509.323.718.459", "CEC de lesão em asa nasal direita", "Exérese de lesão com retalho", "Aguarda Lab + risco", 65, "65999545843", "C44.3", "PENDENCIA"],
+115:    ["Elaine Cristina dos Santos", "898.000.957.922.401", "NIC III com microinvasao", "Histerectomia simples", "Solicitado Lab", 41, "65992935569", "D06", "PENDENCIA"],
+116:    ["Maria Vera Lúcia Alves", "700.106.973.366.515", "Exérese de lesão de pele", "Cbc + local", "Laboratório", 71, "66992488244", "C44.3", "PENDENCIA"],
+117:    ["Luiz da Silva lanes", "706505398277390", "Lesão de pele + retalho", "Lesão de pele + retalho", "Solicito risco", 68, "65999217388", "C44.3", "PENDENCIA"],
+118:    
+119:    // Pele Não Melanoma
+120:    ["Antônio Chaikoski", "706.404.187.776.788", "Cbc em ponta nasal", "Exérese de lesão de pele com retalho", "Pronto", 74, "65992346620", "C44.3", "PELE_NAO_MELANOMA"],
+121:    ["Silmara Simões Salzedas", "705002251083958", "CBC de pele em MSE", "Exérese de pele", "Pronto", 52, "65999813312", "C44.4", "PELE_NAO_MELANOMA"],
+122:    ["Francisco Aparecido Ribeiro", "702604771220145", "Lesao verrucosa em III quirodact dir", "Exerese com fechamento primário", "Agendar data", 63, "66984140683", "C44.3", "PELE_NAO_MELANOMA"],
+123:    
+124:    // Faltoso
+125:    ["Joaquim Martins de Lima", "702604704435747", "CBC ressecado com margens comprometidas", "Ampliação de margens", "Operou na origem", 69, "65999207565", "C44.3", "FALTOSO"],
+126:    
+127:    // Negou / Não atende
+128:    ["Vergílio Rigui", "705000839578755", "Lesão 2 x 2 cm periorbital", "Exérese com margens + retalho", "Não atende", 77, "65999979038", "C44.3", "NEGOU_NAO_ATENDE"],
+129:    ["Maria dos Anjos Alves", "707405058944373", "Cancer de endometrio", "Histerectomia total", "Negou cirurgia", 61, "66996537507", "C54.1", "NEGOU_NAO_ATENDE"],
+130:    
+131:    // Pacientes prontos
+132:    ["Tatiane Maria da Silva", "705809445589538", "CA de mama / espessamento endometrial", "Histerectomia total", "Risco ok", 45, "65992561653", "C50", "PRONTO"],
+133:    ["Ivonete Ferreira da Silva", "707.600.276.938.395", "NIC 3 com suspeita de invasão", "Conização", "Risco ok", 38, "65996264560", "D06", "PRONTO"],
+134:    ["Benedito Rodrigues Leite", "7002077400106727", "Adeno de cólon", "Fechamento de colostomia", "Risco ok", 66, "65992170514", "N/A", "PRONTO"],
+135:    ["Eleuza Rosa Dutra de Faria", "700.008.157.804.900", "Melanoma anterior", "Exérese de lesão", "Ok", 58, "999158813", "C43.4", "PRONTO"],
+136:    ["Daiane Francisca da Silva Souza", "708207121266944", "NIC 3", "Conização", "Internar 1 dia antes", 34, "66984368851", "D06", "PRONTO"],
+137:    ["Cristina Gonçalves da Silva", "700.005.597.393.302", "CBC em asa nasal e lábio", "Exérese + Ampliação", "Risco Ok", 67, "65981151117", "C44.3", "PRONTO"]
+138:  ];
+139:
+140:  seedPatients.forEach(p => insert.run(...p));
+141:}
+142:
+143:async function startServer() {
+144:  const app = express();
+145:  app.use(express.json({ limit: '50mb' }));
+146:  app.use(express.urlencoded({ limit: '50mb', extended: true }));
+147:  const PORT = 3000;
+148:
+149:  // API Routes
+150:  app.get("/api/patients", (req, res) => {
+151:    try {
+152:      const patients = db.prepare("SELECT * FROM patients").all();
+153:      res.json(patients);
+154:    } catch (error) {
+155:      res.status(500).json({ error: "Erro ao buscar pacientes" });
+156:    }
+157:  });
+158:
+159:  app.post("/api/patients/:id/status", (req, res) => {
+160:    const { id } = req.params;
+161:    const { field, value } = req.body;
+162:    
+163:    const allowedFields = ["whatsapp_sent", "aih_generated", "aih_nir", "uti_vacancy", "scheduled_cc"];
+164:    if (!allowedFields.includes(field)) {
+165:      return res.status(400).json({ error: "Campo inválido" });
+166:    }
+167:
+168:    try {
+169:      const stmt = db.prepare(`UPDATE patients SET ${field} = ? WHERE id = ?`);
+170:      stmt.run(value ? 1 : 0, id);
+171:      res.json({ success: true });
+172:    } catch (error) {
+173:      res.status(500).json({ error: "Erro ao atualizar status" });
+174:    }
+175:  });
+176:
+177:  app.delete("/api/patients/:id", (req, res) => {
+178:    const { id } = req.params;
+179:    try {
+180:      const stmt = db.prepare("DELETE FROM patients WHERE id = ?");
+181:      stmt.run(id);
+182:      res.json({ success: true });
+183:    } catch (error) {
+184:      res.status(500).json({ error: "Erro ao excluir paciente" });
+185:    }
+186:  });
+187:
+188:  app.put("/api/patients/:id", (req, res) => {
+189:    const { id } = req.params;
+190:    const {
+191:      name,
+192:      sus_card,
+193:      diagnosis,
+194:      surgery_type,
+195:      risk_status,
+196:      age,
+197:      birth_date,
+198:      phone,
+199:      cid_code,
+200:      procedure_code,
+201:      category,
+202:      doctor
+203:    } = req.body;
+204:
+205:    let finalAge = age || 0;
+206:    if (birth_date) {
+207:      // Calculate age from birth_date (DD/MM/YYYY)
+208:      const parts = birth_date.split('/');
+209:      if (parts.length === 3) {
+210:        const birthDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+211:        const today = new Date();
+212:        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+213:        const m = today.getMonth() - birthDate.getMonth();
+214:        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+215:          calculatedAge--;
+216:        }
+217:        // Only override if the user didn't explicitly provide a different age
+218:        if (!age || finalAge === 0) {
+219:          finalAge = calculatedAge;
+220:        }
+221:      }
+222:    }
+223:
+224:    try {
+225:      const stmt = db.prepare(`
+226:        UPDATE patients 
+227:        SET name = ?, sus_card = ?, diagnosis = ?, surgery_type = ?, 
+228:            risk_status = ?, age = ?, birth_date = ?, phone = ?, 
+229:            cid_code = ?, procedure_code = ?, category = ?, doctor = ?
+230:        WHERE id = ?
+231:      `);
+232:      
+233:      stmt.run(
+234:        name?.trim() || '',
+235:        sus_card?.trim() || '',
+236:        diagnosis?.trim() || '',
+237:        surgery_type?.trim() || '',
+238:        risk_status?.trim() || '',
+239:        finalAge,
+240:        birth_date?.trim() || '',
+241:        phone?.trim() || '',
+242:        cid_code?.trim() || 'N/A',
+243:        procedure_code?.trim() || '',
+244:        category?.trim() || '',
+245:        doctor?.trim() || '',
+246:        id
+247:      );
+248:      
+249:      res.json({ success: true });
+250:    } catch (error) {
+251:      console.error(error);
+252:      res.status(500).json({ error: "Erro ao atualizar paciente" });
+253:    }
+254:  });
+255:
+256:  app.patch("/api/patients/:id", (req, res) => {
+257:    const { id } = req.params;
+258:    const updates = req.body;
+259:    
+260:    // Remove id from updates if present
+261:    delete updates.id;
+262:
+263:    const fields = Object.keys(updates);
+264:    if (fields.length === 0) {
+265:      return res.status(400).json({ error: "Nenhum dado para atualizar" });
+266:    }
+267:
+268:    // Filter allowed fields to prevent SQL injection or unwanted updates
+269:    const allowedFields = [
+270:      "name", "sus_card", "diagnosis", "surgery_type", "risk_status", 
+271:      "age", "birth_date", "phone", "cid_code", "procedure_code", 
+272:      "category", "doctor", "evolution", "exam_pathology", 
+273:      "exam_imaging", "exam_others", "whatsapp_sent", "aih_generated", 
+274:      "aih_nir", "uti_vacancy", "scheduled_cc",
+275:      "data_internacao", "data_cirurgia", "horario_cirurgia"
+276:    ];
+277:
+278:    const filteredFields = fields.filter(f => allowedFields.includes(f));
+279:    
+280:    if (filteredFields.length === 0) {
+281:      return res.status(400).json({ error: "Campos inválidos" });
+282:    }
+283:
+284:    const setClause = filteredFields.map(field => `${field} = ?`).join(", ");
+285:    const values = filteredFields.map(field => updates[field]);
+286:    values.push(id);
+287:
+288:    try {
+289:      const stmt = db.prepare(`UPDATE patients SET ${setClause} WHERE id = ?`);
+290:      stmt.run(...values);
+291:      
+292:      const updatedPatient = db.prepare("SELECT * FROM patients WHERE id = ?").get(id);
+293:      res.json(updatedPatient);
+294:    } catch (error) {
+295:      console.error("Erro no PATCH /api/patients/:id:", error);
+296:      res.status(500).json({ error: "Erro ao atualizar paciente" });
+297:    }
+298:  });
+299:
+300:  app.post("/api/sync-sheets", async (req, res) => {
+301:    try {
+302:      const sheets = [
+303:        { 
+304:          url: "https://docs.google.com/spreadsheets/d/1pUOSrL4TrNU4SPXEK-FscXnyv81yTDLuvEmqtlgHom0/export?format=csv&gid=0", 
+305:          doctor: "Dra. Bianca",
+306:          type: "bianca"
+307:        },
+308:        { 
+309:          url: "https://docs.google.com/spreadsheets/d/1syiK9Q0lM-Y4NsLd51eX7gTeaiQXo_CTuNKekqP0YjA/export?format=csv&gid=0", 
+310:          doctor: "Dr. Rafael",
+311:          type: "rafael"
+312:        },
+313:        {
+314:          url: "https://docs.google.com/spreadsheets/d/1DnnHiiuQRoYR-2qjqESJ93FPmdIR4AVwCIFzBOqWNKI/export?format=csv&gid=0",
+315:          doctor: "Dr. Manoel",
+316:          type: "rafael" // Reusing Rafael's parser since it looks for headers
+317:        },
+318:        {
+319:          url: "https://docs.google.com/spreadsheets/d/15pieYLg5y6_AYHIKmrDobmH7oS18iRF7ydLy8RNkbuU/export?format=csv&gid=0",
+320:          doctor: "Dra. Mara",
+321:          type: "rafael" // Reusing Rafael's parser since it looks for headers
+322:        },
+323:        {
+324:          url: "https://docs.google.com/spreadsheets/d/11cZSuPAM0THHI3NjDROVo_y_kr8WAUWVf-5JYShW0Rw/export?format=csv&gid=0",
+325:          doctor: "Dr. Gilmar",
+326:          type: "rafael" // Reusing Rafael's parser since it looks for headers
+327:        }
+328:      ];
+329:
+330:      console.log("Starting sync...");
+331:      let totalAdded = 0;
+332:      let totalUpdated = 0;
+333:      let syncLogs: string[] = [];
+334:
+335:      for (const sheet of sheets) {
+336:        syncLogs.push(`Fetching sheet for ${sheet.doctor}...`);
+337:        const response = await fetch(sheet.url);
+338:        if (!response.ok) {
+339:          syncLogs.push(`Failed to fetch ${sheet.url}: ${response.statusText}`);
+340:          continue;
+341:        }
+342:        
+343:        syncLogs.push(`Fetched ${sheet.doctor}, parsing CSV...`);
+344:        const csvText = await response.text();
+345:        
+346:        if (csvText.trim().startsWith("<!DOCTYPE html>") || csvText.includes("<html")) {
+347:          return res.status(403).json({ 
+348:            error: "Acesso negado às planilhas. Por favor, certifique-se de que as planilhas do Google estão configuradas como 'Qualquer pessoa com o link pode ver' (Público)." 
+349:          });
+350:        }
+351:
+352:        const parsed = Papa.parse(csvText, {
+353:          header: false,
+354:          skipEmptyLines: true,
+355:        });
+356:
+357:        const rows = parsed.data as string[][];
+358:
+359:        if (sheet.type === "rafael") {
+360:          // Find header row
+361:          let headerRowIndex = -1;
+362:          for (let i = 0; i < Math.min(20, rows.length); i++) {
+363:            const rowStr = rows[i].join("").toLowerCase().replace(/\s+/g, '');
+364:            if (rowStr.includes("paciente") && (rowStr.includes("sus") || rowStr.includes("cns"))) {
+365:              headerRowIndex = i;
+366:              break;
+367:            }
+368:          }
+369:
+370:          if (headerRowIndex !== -1) {
+371:            const headers = rows[headerRowIndex].map(h => h.toLowerCase().trim().replace(/\s+/g, ''));
+372:            const nameIdx = headers.findIndex(h => h.includes('paciente') || h.includes('nome') || h.includes('operados'));
+373:            const susIdx = headers.findIndex(h => h.includes('sus') || h.includes('cns'));
+374:            const diagIdx = headers.findIndex(h => h.includes('patologia') || h.includes('diagn'));
+375:            const surgIdx = headers.findIndex(h => h.includes('proposta') || h.includes('cirurgia'));
+376:            const birthIdx = headers.findIndex(h => h.includes('nascimento') || h === 'dn');
+377:            const riskIdx = headers.findIndex(h => h.includes('pendência') || h.includes('risco') || h.includes('lab/exam') || h.includes('conduta'));
+378:            const phoneIdx = headers.findIndex(h => h.includes('contato') || h.includes('telefone'));
+379:
+380:            syncLogs.push(`Found headers at row ${headerRowIndex}. nameIdx: ${nameIdx}, susIdx: ${susIdx}, diagIdx: ${diagIdx}, surgIdx: ${surgIdx}, birthIdx: ${birthIdx}, riskIdx: ${riskIdx}, phoneIdx: ${phoneIdx}`);
+381:            for (let i = headerRowIndex + 1; i < rows.length; i++) {
+382:              const row = rows[i];
+383:              const rawName = nameIdx >= 0 ? row[nameIdx] : '';
+384:              const rawSus = susIdx >= 0 ? row[susIdx] : '';
+385:              
+386:              const name = cleanWords(rawName);
+387:              const sus_card = cleanSusCard(rawSus, row) || `SEM_SUS_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+388:              
+389:              if (!name || name.toLowerCase() === 'paciente') continue;
+390:
+391:              const diagnosis = cleanWords(diagIdx >= 0 ? row[diagIdx] : '');
+392:              const surgery_type = cleanWords(surgIdx >= 0 ? row[surgIdx] : '');
+393:              const birth_date = cleanDate(birthIdx >= 0 ? row[birthIdx] : '', row);
+394:              const risk_status = cleanWords(riskIdx >= 0 ? row[riskIdx] : '') || 'Aguardando';
+395:              const phone = cleanPhone(phoneIdx >= 0 ? row[phoneIdx] : '', row);
+396:              
+397:              // Skip rows that are likely section headers (only name is present, and it's often uppercase)
+398:              if (!rawSus && !diagnosis && !surgery_type && !birth_date && !phone && (!risk_status || risk_status.toLowerCase() === 'aguardando')) {
+399:                syncLogs.push(`Skipping likely section header: ${name}`);
+400:                continue;
+401:              }
+402:
+403:              syncLogs.push(`Processing patient: ${name} for ${sheet.doctor}`);
+404:              processPatient(name, sus_card, diagnosis, surgery_type, risk_status, birth_date, phone, sheet.doctor);
+405:            }
+406:          } else {
+407:            syncLogs.push(`Could not find header row for ${sheet.doctor}`);
+408:          }
+409:        } else if (sheet.type === "bianca") {
+410:          // Bianca's sheet has no headers, fixed columns
+411:          for (const row of rows) {
+412:            if (row.length < 9) continue;
+413:            
+414:            const rawName = row[3];
+415:            const rawSus = row[8];
+416:            
+417:            const name = cleanWords(rawName);
+418:            const sus_card = cleanSusCard(rawSus, row) || `SEM_SUS_${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+419:            
+420:            if (!name || name.toLowerCase().includes('paciente')) continue;
+421:
+422:            const birth_date = cleanDate(row[4], row);
+423:            const diagnosis = cleanWords(row[5]);
+424:            const surgery_type = cleanWords(row[6]) || cleanWords(row[5]);
+425:            const phone = cleanPhone(row[9], row);
+426:            const risk_status = cleanWords(row[0]) || 'Aguardando';
+427:
+428:            processPatient(name, sus_card, diagnosis, surgery_type, risk_status, birth_date, phone, sheet.doctor);
+429:          }
+430:        }
+431:      }
+432:
+433:      function processPatient(name: string, sus_card: string, diagnosis: string, surgery_type: string, risk_status: string, birth_date: string, phone: string, doctor: string) {
+434:        // Calculate age
+435:        let finalAge = 0;
+436:        if (birth_date) {
+437:          const parts = birth_date.split('/');
+438:          if (parts.length === 3) {
+439:            const birthDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+440:            if (!isNaN(birthDate.getTime())) {
+441:              const today = new Date();
+442:              let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+443:              const m = today.getMonth() - birthDate.getMonth();
+444:              if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+445:                calculatedAge--;
+446:              }
+447:              finalAge = calculatedAge;
+448:            }
+449:          }
+450:        }
+451:
+452:        const category = 'PENDENCIA';
+453:        const combinedText = `${diagnosis || ""} ${surgery_type || ""}`.trim();
+454:        const cid_code = findBestCID(combinedText);
+455:        const procedure_code = findBestProcedure(surgery_type || "").code;
+456:        
+457:        // Find existing by name or sus_card (only if sus_card is not a placeholder)
+458:        let existing: { id: number, sus_card: string } | undefined;
+459:        
+460:        let finalSusCard = sus_card;
+461:        
+462:        if (finalSusCard.startsWith('SEM_SUS_')) {
+463:          existing = db.prepare("SELECT id, sus_card FROM patients WHERE name = ?").get(name) as { id: number, sus_card: string } | undefined;
+464:          if (existing) {
+465:            // Reuse the existing placeholder or real sus_card so it doesn't keep changing
+466:            finalSusCard = existing.sus_card;
+467:          }
+468:        } else {
+469:          existing = db.prepare("SELECT id, sus_card FROM patients WHERE sus_card = ? OR name = ?").get(finalSusCard, name) as { id: number, sus_card: string } | undefined;
+470:        }
+471:
+472:        if (existing) {
+473:          db.prepare(`
+474:            UPDATE patients 
+475:            SET name = ?, sus_card = ?, diagnosis = ?, surgery_type = ?, risk_status = ?, age = ?, birth_date = ?, phone = ?, doctor = ?, cid_code = ?, procedure_code = ?
+476:            WHERE id = ?
+477:          `).run(name, finalSusCard, diagnosis, surgery_type, risk_status, finalAge, birth_date, phone, doctor, cid_code, procedure_code, existing.id);
+478:          totalUpdated++;
+479:        } else {
+480:          db.prepare(`
+481:            INSERT INTO patients (name, sus_card, diagnosis, surgery_type, risk_status, age, birth_date, phone, cid_code, procedure_code, category, doctor)
+482:            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+483:          `).run(name, finalSusCard, diagnosis, surgery_type, risk_status, finalAge, birth_date, phone, cid_code, procedure_code, category, doctor);
+484:          totalAdded++;
+485:        }
+486:      }
+487:
+488:      console.log(`Sync complete. Added: ${totalAdded}, Updated: ${totalUpdated}`);
+489:      res.json({ success: true, added: totalAdded, updated: totalUpdated, logs: syncLogs });
+490:    } catch (error) {
+491:      console.error("Sync error:", error);
+492:      res.status(500).json({ error: "Erro ao sincronizar planilhas" });
+493:    }
+494:  });
+495:
+496:  app.post("/api/patients", (req, res) => {
+497:    const { name, sus_card, diagnosis, surgery_type, risk_status, age, birth_date, phone, cid_code, procedure_code, category, doctor } = req.body;
+498:    
+499:    if (!name || !sus_card) {
+500:      return res.status(400).json({ error: "Nome e Cartão SUS são obrigatórios" });
+501:    }
+502:
+503:    let finalAge = age || 0;
+504:    if (!finalAge && birth_date) {
+505:      // Calculate age from birth_date (DD/MM/YYYY)
+506:      const parts = birth_date.split('/');
+507:      if (parts.length === 3) {
+508:        const birthDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+509:        const today = new Date();
+510:        let calculatedAge = today.getFullYear() - birthDate.getFullYear();
+511:        const m = today.getMonth() - birthDate.getMonth();
+512:        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+513:          calculatedAge--;
+514:        }
+515:        finalAge = calculatedAge;
+516:      }
+517:    }
+518:
+519:    try {
+520:      const stmt = db.prepare(`
+521:        INSERT INTO patients (name, sus_card, diagnosis, surgery_type, risk_status, age, birth_date, phone, cid_code, procedure_code, category, doctor)
+522:        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+523:      `);
+524:      const result = stmt.run(name, sus_card, diagnosis || "", surgery_type || "", risk_status || "Aguardando", finalAge, birth_date || null, phone || "", cid_code || "", procedure_code || "", category || "PENDENCIA", doctor || "");
+525:      res.json({ id: result.lastInsertRowid });
+526:    } catch (error) {
+527:      res.status(500).json({ error: "Erro ao adicionar paciente" });
+528:    }
+529:  });
+530:
+531:  app.post("/api/whatsapp/send", (req, res) => {
+532:    const { patientId, template } = req.body;
+533:    // Simulate Meta API call
+534:    console.log(`Enviando WhatsApp para paciente ${patientId} usando template ${template}`);
+535:    
+536:    // Update status
+537:    const stmt = db.prepare(`UPDATE patients SET whatsapp_sent = 1 WHERE id = ?`);
+538:    stmt.run(patientId);
+539:    
+540:    res.json({ success: true, message: "WhatsApp enviado com sucesso (Simulação)" });
+541:  });
+542:
+543:  app.post("/api/generate-surgical-description", async (req, res) => {
+544:    const { templateText, refineData, patient } = req.body;
+545:    
+546:    let apiKey = process.env.GEMINI_API_KEY;
+547:    if (!apiKey || apiKey === "undefined" || apiKey === "null") {
+548:      return res.status(500).json({ error: "A chave da API do Gemini não está configurada. Por favor, adicione sua GEMINI_API_KEY nas configurações do projeto." });
+549:    }
+550:    
+551:    // Remove quotes if the user accidentally included them in the secret
+552:    apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
+553:
+554:    try {
+555:      const ai = new GoogleGenAI({ apiKey });
+556:      const systemInstruction = `Você é um cirurgião sênior especialista. Sua tarefa é reescrever e personalizar uma Descrição Cirúrgica padrão com base em informações clínicas específicas do paciente.
+557:      
+558:Diretrizes de Personalização (baseadas em evidências):
+559:1. Idade/Fragilidade: Se idoso, mencione fragilidade tecidual, uso de técnicas híbridas de fechamento (fitas adesivas, cianoacrilato) ou suturas sem tensão para evitar "efeito fio de queijo".
+560:2. Obesidade/Desnutrição: Se obeso, mencione espessamento do panículo, dissecção profunda, uso de energia (ultrassônico/cautério), fechamento em múltiplos planos e drenos. Se desnutrido/emagrecido, mencione aponeurose delgada, uso de fios inabsorvíveis/absorção lenta, suturas de retenção ou telas profiláticas.
+561:3. Comorbidades (Cirrose, Renal, Diabetes): Cirrose -> hemostasia meticulosa, ligadura de colaterais, evitar sobrecarga de volume. Renal -> controle hemodinâmico rigoroso. Diabetes -> tecidos rígidos, risco de infecção.
+562:4. Medicações (Corticoides, Anticoagulantes, Biológicos): Corticoides -> tecido friável, cicatrização pobre. Anticoagulantes -> uso de hemostáticos locais (ácido tranexâmico, esponjas).
+563:5. Radioterapia Prévia: "Pelvis congelada", fibrose lenhosa densa, ausência de planos de clivagem, dissecção laboriosa, risco de lesão nervosa/vascular.
+564:6. Quimioterapia Prévia: Friabilidade tecidual aguda, edema, exsudação capilar profusa, anastomoses reforçadas.
+565:7. Cirurgias Prévias (Aderências): Bridas densas, lise cuidadosa (adhesiólise), risco de enterotomia, uso de barreiras antiaderenciais. Fáscia multioperada -> fechamento em massa (Smead-Jones modificado), uso de telas.
+566:8. Exames de Imagem/Físico: Envolvimento vascular, hérnias, posicionamento difícil (rigidez espinhal).
+567:
+568:IMPORTANTE:
+569:- Não seja radical demais. Aleatorize as alterações e aplique APENAS o que fizer sentido com base nos dados fornecidos nas caixas.
+570:- Mantenha a estrutura formal e profissional do relatório cirúrgico.
+571:- Retorne APENAS o texto final da descrição cirúrgica, sem introduções ou explicações.`;
+572:
+573:      const prompt = `
+574:Modelo Padrão:
+575:${templateText}
+576:
+577:Dados do Paciente:
+578:Nome: ${patient.name}
+579:Idade: ${patient.age}
+580:
+581:Informações Clínicas Adicionais (Refinamento):
+582:1. Idade/Peso/Comorbidades/Medicações: ${refineData.box1 || 'Não informado'}
+583:2. Estadiamento/Tratamentos prévios: ${refineData.box2 || 'Não informado'}
+584:3. Achados de exames: ${refineData.box3 || 'Não informado'}
+585:4. Exame Físico: ${refineData.box4 || 'Não informado'}
+586:
+587:Reescreva o Modelo Padrão incorporando sutilmente e tecnicamente os achados relevantes das Informações Clínicas Adicionais, seguindo as diretrizes do sistema.`;
+588:
+589:      const response = await ai.models.generateContent({
+590:        model: "gemini-3-flash-preview",
+591:        contents: prompt,
+592:        config: {
+593:          systemInstruction,
+594:          temperature: 0.4,
+595:        }
+596:      });
+597:
+598:      res.json({ text: response.text });
+599:    } catch (error: any) {
+600:      console.error("Erro ao gerar descrição:", error);
+601:      
+602:      if (error.message?.includes("API key not valid")) {
+603:        return res.status(500).json({ error: "A chave da API do Gemini é inválida. Por favor, verifique sua GEMINI_API_KEY nas configurações do projeto." });
+604:      }
+605:      
+606:      res.status(500).json({ error: "Erro ao gerar descrição personalizada" });
+607:    }
+608:  });
+609:
+610:  app.post("/api/patients/:id/evolution", (req, res) => {
+611:    const { id } = req.params;
+612:    const { evolution } = req.body;
+613:    try {
+614:      const stmt = db.prepare("UPDATE patients SET evolution = ? WHERE id = ?");
+615:      stmt.run(evolution, id);
+616:      res.json({ success: true });
+617:    } catch (error) {
+618:      res.status(500).json({ error: "Erro ao salvar evolução" });
+619:    }
+620:  });
+621:
+622:  app.post("/api/patients/:id/exams", (req, res) => {
+623:    const { id } = req.params;
+624:    const { exam_pathology, exam_imaging, exam_others } = req.body;
+625:    try {
+626:      const stmt = db.prepare(`
+627:        UPDATE patients 
+628:        SET exam_pathology = ?, exam_imaging = ?, exam_others = ?
+629:        WHERE id = ?
+630:      `);
+631:      stmt.run(exam_pathology || '', exam_imaging || '', exam_others || '', id);
+632:      res.json({ success: true });
+633:    } catch (error) {
+634:      console.error("Erro ao salvar exames:", error);
+635:      res.status(500).json({ error: "Erro ao salvar exames" });
+636:    }
+637:  });
+638:
+639:  app.post("/api/generate-ehr", async (req, res) => {
+640:  const { patient } = req.body;
+641:  let apiKey = process.env.GEMINI_API_KEY;
+642:
+643:  if (!apiKey) {
+644:    return res.status(500).json({ error: "Gemini API key is not configured." });
+645:  }
+646:  apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
+647:
+648:  try {
+649:    const ai = new GoogleGenAI({ apiKey });
+650:    const systemInstruction = `You are a senior medical professional. Your task is to generate a comprehensive Electronic Health Record (EHR) summary for the given patient.
+651:    
+652:The EHR should include:
+653:- Patient Demographics (Name, Age, Phone, SUS Card)
+654:- Primary Diagnosis
+655:- Planned/Completed Surgery Type
+656:- Risk Status & Category
+657:- A brief narrative summary of the patient's clinical status based on the provided data.
+658:
+659:Format the output clearly using Markdown. Keep it professional, concise, and medically accurate.`;
+660:
+661:    const prompt = `Generate an EHR summary for the following patient:
+662:Name: ${patient.name}
+663:Age: ${patient.age}
+664:Diagnosis: ${patient.diagnosis}
+665:Surgery Type: ${patient.surgery_type}
+666:Risk Status: ${patient.risk_status}
+667:Category: ${patient.category}
+668:Doctor: ${patient.doctor || 'Not assigned'}
+669:Phone: ${patient.phone}
+670:SUS Card: ${patient.sus_card}
+671:CID Code: ${patient.cid_code}
+672:Procedure Code: ${patient.procedure_code || 'N/A'}`;
+673:
+674:    const response = await ai.models.generateContent({
+675:      model: "gemini-3-flash-preview",
+676:      contents: prompt,
+677:      config: {
+678:        systemInstruction: systemInstruction,
+679:        temperature: 0.3,
+680:      },
+681:    });
+682:
+683:    res.json({ ehr: response.text });
+684:  } catch (error: any) {
+685:    console.error("Error generating EHR:", error);
+686:    res.status(500).json({ error: "Failed to generate EHR. Please try again." });
+687:  }
+688:});
+689:
+690:app.post("/api/generate-surgical-risk", async (req, res) => {
+691:  const { patient } = req.body;
+692:  let apiKey = process.env.GEMINI_API_KEY;
+693:
+694:  if (!apiKey) {
+695:    return res.status(500).json({ error: "Gemini API key is not configured." });
+696:  }
+697:  apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
+698:
+699:  try {
+700:    const ai = new GoogleGenAI({ apiKey });
+701:    const systemInstruction = `You are an expert anesthesiologist and surgeon. Your task is to generate a Surgical Risk Assessment for the given patient.
+702:    
+703:The assessment should include:
+704:- Estimated ASA Physical Status Classification (based on age and diagnosis, state assumptions if needed)
+705:- Potential perioperative risks and complications specific to the surgery type (${patient.surgery_type}) and diagnosis (${patient.diagnosis})
+706:- Recommendations for preoperative optimization or intraoperative management.
+707:
+708:Format the output clearly using Markdown. Keep it professional and medically sound. Note that this is an AI-generated estimate and should be verified by a clinician.`;
+709:
+710:    const prompt = `Generate a Surgical Risk Assessment for the following patient:
+711:Name: ${patient.name}
+712:Age: ${patient.age}
+713:Diagnosis: ${patient.diagnosis}
+714:Surgery Type: ${patient.surgery_type}
+715:Risk Status: ${patient.risk_status}`;
+716:
+717:    const response = await ai.models.generateContent({
+718:      model: "gemini-3-flash-preview",
+719:      contents: prompt,
+720:      config: {
+721:        systemInstruction: systemInstruction,
+722:        temperature: 0.4,
+723:      },
+724:    });
+725:
+726:    res.json({ riskAssessment: response.text });
+727:  } catch (error: any) {
+728:    console.error("Error generating Surgical Risk:", error);
+729:    res.status(500).json({ error: "Failed to generate Surgical Risk Assessment. Please try again." });
+730:  }
+731:});
+732:
+733:app.post("/api/generate-evolution", async (req, res) => {
+734:    const { audioData, mimeType, patientContext, evolutionTemplate } = req.body;
+735:    
+736:    let apiKey = process.env.GEMINI_API_KEY;
+737:    if (!apiKey) {
+738:      return res.status(500).json({ error: "A chave da API do Gemini não está configurada." });
+739:    }
+740:    apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
+741:
+742:    try {
+743:      const ai = new GoogleGenAI({ apiKey });
+744:      const systemInstruction = `Você é uma IA médica avançada composta por três agentes trabalhando em conjunto:
+745:1. Agente Transcritor: Transcreve perfeitamente o áudio da consulta.
+746:2. Agente Filtro: Analisa a transcrição e o contexto do paciente, excluindo qualquer dado não relevante para o contexto médico (falas prolixas, distrações, etc).
+747:3. Agente Redator: Pega os dados filtrados e gera uma evolução médica muito bem redigida com base no padrão fornecido.
+748:
+749:Retorne APENAS o texto da evolução médica final, sem introduções, sem explicações dos agentes, apenas a evolução pronta para o prontuário.`;
+750:
+751:      const prompt = `
+752:Contexto do Paciente:
+753:${patientContext}
+754:
+755:Padrão de Evolução Desejado:
+756:${evolutionTemplate || "Evolução SOAP (Subjetivo, Objetivo, Avaliação, Plano)"}
+757:
+758:Por favor, processe o áudio anexo e gere a evolução médica.`;
+759:
+760:      const response = await ai.models.generateContent({
+761:        model: "gemini-3-flash-preview",
+762:        contents: {
+763:          parts: [
+764:            {
+765:              inlineData: {
+766:                mimeType: mimeType || "audio/webm",
+767:                data: audioData
+768:              }
+769:            },
+770:            { text: prompt }
+771:          ]
+772:        },
+773:        config: {
+774:          systemInstruction,
+775:          temperature: 0.2,
+776:        }
+777:      });
+778:
+779:      res.json({ text: response.text });
+780:    } catch (error: any) {
+781:      console.error("Erro ao gerar evolução:", error);
+782:      
+783:      if (error.message?.includes("API key not valid")) {
+784:        return res.status(500).json({ error: "A chave da API do Gemini é inválida. Por favor, verifique sua GEMINI_API_KEY nas configurações do projeto." });
+785:      }
+786:      
+787:      res.status(500).json({ error: "Erro ao gerar evolução médica a partir do áudio." });
+788:    }
+789:  });
+790:
+791:  app.post("/api/generate-surgical-report", async (req, res) => {
+792:    const { surgery, patientName, doctorName } = req.body;
+793:
+794:    try {
+795:      const publicDir = path.join(process.cwd(), 'public');
+796:      let files: string[] = [];
+797:      if (fs.existsSync(publicDir)) {
+798:        files = fs.readdirSync(publicDir).filter(f => f.endsWith('.docx'));
+799:      }
+800:      
+801:      // Find the best matching file for the requested surgery
+802:      let matchedFile = files.find(f => f.toLowerCase().includes(surgery.toLowerCase()));
+803:      
+804:      // If no exact match, try to find by partial words
+805:      if (!matchedFile) {
+806:        const surgeryWords = surgery.toLowerCase().split(' ').filter((w: string) => w.length > 3);
+807:        matchedFile = files.find(f => surgeryWords.some((w: string) => f.toLowerCase().includes(w)));
+808:      }
+809:
+810:      if (!matchedFile) {
+811:        // Fallback to a generic template if no match is found, or just pick the first one
+812:        matchedFile = files.length > 0 ? files[0] : null;
+813:      }
+814:
+815:      if (!matchedFile) {
+816:        return res.status(404).json({ error: "Nenhum modelo de documento encontrado na pasta public." });
+817:      }
+818:
+819:      const filePath = path.join(publicDir, matchedFile);
+820:      const result = await mammoth.extractRawText({ path: filePath });
+821:      let text = result.value;
+822:
+823:      // Simple adaptations based on user request
+824:      // Replace patient name (assuming it comes after "paciente:" or "Paciente:")
+825:      text = text.replace(/(paciente:\s*)([A-Z\s]+)(?=\n|\r|CPF)/i, `$1${patientName.toUpperCase()} `);
+826:      
+827:      // Replace doctor name (assuming it comes after "médico(a) DR." or similar)
+828:      text = text.replace(/(médico\(a\)\s+DR\.\s*)([A-Z\s]+)/i, `$1${doctorName.toUpperCase()}`);
+829:      
+830:      // Also append the specific info at the top to ensure it's visible
+831:      const header = `PACIENTE: ${patientName.toUpperCase()}\nMÉDICO: ${doctorName.toUpperCase()}\nPROCEDIMENTO: ${surgery.toUpperCase()}\n\n`;
+832:      
+833:      res.json({ text: header + text });
+834:    } catch (error: any) {
+835:      console.error("Erro ao gerar relatório cirúrgico:", error);
+836:      res.status(500).json({ error: "Erro ao gerar relatório cirúrgico." });
+837:    }
+838:  });
+839:
+840:  app.post("/api/scan-prontuario", async (req, res) => {
+841:    const { parts } = req.body;
+842:    let apiKey = process.env.GEMINI_API_KEY;
+843:    if (!apiKey) {
+844:      return res.status(500).json({ error: "A chave da API do Gemini não está configurada." });
+845:    }
+846:    apiKey = apiKey.replace(/^["']|["']$/g, '').trim();
+847:
+848:    try {
+849:      const ai = new GoogleGenAI({ apiKey });
+850:      const response = await ai.models.generateContent({
+851:        model: "gemini-3-flash-preview",
+852:        contents: { parts },
+853:        config: {
+854:          responseMimeType: "application/json",
+855:          responseSchema: {
+856:            type: Type.OBJECT,
+857:            properties: {
+858:              name: { type: Type.STRING },
+859:              sus_card: { type: Type.STRING },
+860:              diagnosis: { type: Type.STRING },
+861:              surgery_type: { type: Type.STRING },
+862:              age: { type: Type.INTEGER },
+863:              birth_date: { type: Type.STRING },
+864:              phone: { type: Type.STRING },
+865:              doctor: { type: Type.STRING },
+866:              risk_status: { type: Type.STRING },
+867:              whatsapp_sent: { type: Type.INTEGER },
+868:              aih_generated: { type: Type.INTEGER },
+869:              aih_nir: { type: Type.INTEGER },
+870:              uti_vacancy: { type: Type.INTEGER },
+871:              scheduled_cc: { type: Type.INTEGER },
+872:              exam_pathology: { type: Type.STRING },
+873:              exam_imaging: { type: Type.STRING },
+874:              exam_others: { type: Type.STRING },
+875:            },
+876:          },
+877:        },
+878:      });
+879:
+880:      res.json({ text: response.text });
+881:    } catch (error: any) {
+882:      console.error("Erro ao escanear prontuário:", error);
+883:      if (error.message?.includes("API key not valid")) {
+884:        return res.status(500).json({ error: "A chave da API do Gemini é inválida. Por favor, verifique sua GEMINI_API_KEY nas configurações do projeto." });
+885:      }
+886:      res.status(500).json({ error: "Erro ao processar as imagens." });
+887:    }
+888:  });
+889:
+890:  // Vite middleware for development
+891:  if (process.env.NODE_ENV !== "production") {
+892:    const vite = await createViteServer({
+893:      server: { middlewareMode: true },
+894:      appType: "spa",
+895:    });
+896:    app.use(vite.middlewares);
+897:  } else {
+898:    const distPath = path.join(process.cwd(), 'dist');
+899:    app.use(express.static(distPath));
+900:    app.get('*', (req, res) => {
+901:      res.sendFile(path.join(distPath, 'index.html'));
+902:    });
+903:  }
+904:
+905:  app.listen(PORT, "0.0.0.0", () => {
+906:    console.log(`Server running on http://localhost:${PORT}`);
+907:  });
+908:}
+909:
+910:startServer();
