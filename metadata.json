@@ -1,0 +1,5 @@
+{
+  "name": "Cirurgia Notebook - Gestão Cirúrgica Inteligente",
+  "description": "Sistema avançado para gestão de pacientes cirúrgicos com suporte offline, automação de WhatsApp e geração de documentos com IA.",
+  "requestFramePermissions": ["microphone"]
+}
