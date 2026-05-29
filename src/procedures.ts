@@ -1,0 +1,187 @@
+export const PROCEDURES = [
+  { code: "04.16.02.002-0", description: "LINFADENECTOMIA PELVICA EM ONCOLOGIA" },
+  { code: "04.16.02.003-8", description: "LINFADENECTOMIA DE TRONCO CELIACO EM ONCOLOGIA" },
+  { code: "04.16.02.004-6", description: "LINFADENECTOMIA ILEO-LOMBAR EM ONCOLOGIA" },
+  { code: "04.16.02.005-4", description: "LINFADENECTOMIA RADICAL AXILAR BILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.006-2", description: "LINFADENECTOMIA RADICAL AXILAR UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.007-0", description: "LINFADENECTOMIA RADICAL CERVICAL BILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.008-9", description: "LINFADENECTOMIA RADICAL CERVICAL UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.009-7", description: "LINFADENECTOMIA RADICAL INGUINAL BILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.010-0", description: "LINFADENECTOMIA RADICAL INGUINAL UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.011-9", description: "LINFADENECTOMIA RADICAL VULVAR EM ONCOLOGIA" },
+  { code: "04.16.02.012-7", description: "LINFADENECTOMIA RETROPERITONIAL EM ONCOLOGIA" },
+  { code: "04.16.02.013-5", description: "LINFADENECTOMIA SUPRACLAVICULAR BILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.014-3", description: "LINFADENECTOMIA SUPRACLAVICULAR UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.015-1", description: "LINFADENECTOMIA RADICAL CERVICAL UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.016-0", description: "LINFADENECTOMIA RADICAL MODIFICADA CERVICAL UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.017-8", description: "LINFADENECTOMIA CERVICAL SUPRAOMO-HIOIDEA UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.018-6", description: "LINFADENECTOMIA CERVICAL RECORRENCIAL UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.019-4", description: "MEDIASTINOSCOPIA/LINFADENECTOMIA MEDIASTINAL EM ONCOLOGIA" },
+  { code: "04.16.02.020-8", description: "LINFADENECTOMIA SUPRACLAVICULAR UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.021-6", description: "LINFADENECTOMIA AXILAR UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.022-4", description: "LINFADENECTOMIA RETROPERITONIAL EM ONCOLOGIA" },
+  { code: "04.16.02.023-2", description: "LINFADENECTOMIA INGUINAL UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.02.024-0", description: "LINFADENECTOMIA SELETIVA GUIADA (LINFONODO SENTINELA) EM ONCOLOGIA" },
+  { code: "04.16.02.025-9", description: "LINFADENECTOMIA INGUINO-ILIACA UNILATERAL EM ONCOLOGIA" },
+  { code: "04.16.03.004-1", description: "RESSECÇÃO DE GLÂNDULA SUBMANDIBULAR EM ONCOLOGIA" },
+  { code: "04.16.03.008-4", description: "PARATIREOIDECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.03.009-2", description: "PAROTIDECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.03.014-9", description: "RESSECÇÃO EM CUNHA DE LÁBIO E SUTURA EM ONCOLOGIA" },
+  { code: "04.16.03.016-5", description: "RESSECÇÃO TOTAL DE LÁBIO E RECONSTRUÇÃO COM RETALHO MIOCUTÂNEO EM ONCOLOGIA" },
+  { code: "04.16.03.017-3", description: "MAXILECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.03.018-1", description: "MAXILECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.03.019-0", description: "PELVIGLOSSOMANDIBULECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.03.020-3", description: "PAROTIDECTOMIA TOTAL AMPLIADA EM ONCOLOGIA" },
+  { code: "04.16.03.023-8", description: "RESSECÇÃO DE TUMOR DE RINOFARINGE EM ONCOLOGIA" },
+  { code: "04.16.03.024-6", description: "EXENTERAÇÃO DE ÓRBITA EM ONCOLOGIA" },
+  { code: "04.16.03.025-4", description: "LARINGECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.03.027-0", description: "TIREOIDECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.03.029-7", description: "TRAQUEOSTOMIA TRANSTUMORAL EM ONCOLOGIA" },
+  { code: "04.16.03.032-7", description: "RESSECÇÃO DE PAVILHÃO AURICULAR EM ONCOLOGIA" },
+  { code: "04.16.03.035-1", description: "RESSECÇÃO DE LESÃO MALIGNA DE MUCOSA BUCAL EM ONCOLOGIA" },
+  { code: "04.16.04.001-2", description: "ANASTOMOSE BILEO-DIGESTIVA EM ONCOLOGIA" },
+  { code: "04.16.04.002-0", description: "COLEDOCOSTOMIA COM OU SEM COLECISTECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.003-9", description: "ESOFAGOGASTRECTOMIA COM TORACOTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.004-7", description: "ESOFAGOCOLOPLASTIA OU ESOFAGOGASTROPLASTIA EM ONCOLOGIA" },
+  { code: "04.16.04.005-5", description: "ESOFAGOGASTRECTOMIA TRANS -HIATAL EM ONCOLOGIA" },
+  { code: "04.16.04.006-3", description: "ESPLENECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.007-1", description: "GASTRECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.04.008-0", description: "GASTROENTEROANASTOMOSE EM ONCOLOGIA" },
+  { code: "04.16.04.009-8", description: "GASTROSTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.010-1", description: "HEPATECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.04.011-0", description: "PANCREATECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.04.012-8", description: "DUODENOPANCREATECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.013-6", description: "PANCREATO-ENTEROSTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.014-4", description: "RESSECÇÃO DE TUMOR RETROPERITONIAL COM RESSECÇÃO DE ÓRGÃOS CONTÍGUOS EM ONCOLOGIA" },
+  { code: "04.16.04.015-2", description: "RESSECCAO MULTIPLA DE SEGMENTOS DO TUBO DIGESTIVO (ESOFAGO, ESTOMAGO E INTESTINO DELGADO) EM ONCOLOGIA" },
+  { code: "04.16.04.016-0", description: "SUPRARRENALECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.017-9", description: "ALCOOLIZAÇÃO PERCUTÂNEA DE CARCINOMA HEPÁTICO" },
+  { code: "04.16.04.018-7", description: "TRATAMENTO DE CARCINOMA HEPÁTICO POR RADIOFREQUÊNCIA" },
+  { code: "04.16.04.019-5", description: "QUIMIOEMBOLIZAÇÃO DE CARCINOMA HEPÁTICO" },
+  { code: "04.16.04.020-9", description: "LAPAROTOMIA EXPLORADORA COM RESSECÇÃO COMPLETA OU INCOMPLETA DO TUMOR EM ONCOLOGIA" },
+  { code: "04.16.04.021-7", description: "GASTRECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.04.022-5", description: "METASTASECTOMIA HEPÁTICA EM ONCOLOGIA" },
+  { code: "04.16.04.023-3", description: "COLECISTECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.024-1", description: "RESSECÇÃO AMPLIADA DE VIA BILIAR EXTRA-HEPÁTICA EM ONCOLOGIA" },
+  { code: "04.16.04.025-0", description: "RESSECÇÃO DE TUMOR RETROPERITONIAL EM ONCOLOGIA" },
+  { code: "04.16.04.026-8", description: "RESSECÇÃO ALARGADA DE TUMOR DE PARTES MOLES DE PAREDE ABDOMINAL EM ONCOLOGIA" },
+  { code: "04.16.04.027-6", description: "RESSECÇÃO ALARGADA DE TUMOR DE INTESTINO EM ONCOLOGIA" },
+  { code: "04.16.04.028-4", description: "IMPLANTAÇÃO ENDOSCÓPICA DE STENT ESOFÁGICO" },
+  { code: "04.16.04.029-2", description: "PERITONECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.04.030-6", description: "QUIMIOPERFUSÃO INTRAPERITONEAL HIPERTÉRMICA" },
+  { code: "04.16.04.031-4", description: "GASTRECTOMIA VIDEOLAPAROSCÓPICA EM ONCOLOGIA" },
+  { code: "04.16.04.032-2", description: "ESOFAGOGASTRECTOMIA VIDEOLAPAROSCÓPICA EM ONCOLOGIA" },
+  { code: "04.16.04.033-0", description: "LAPARATOMIA EXPLORADORA VIDEOLAPAROSCÓPICA EM ONCOLOGIA" },
+  { code: "04.16.04.034-9", description: "PANCREATECTOMIA PARCIAL VIDEOLAPAROSCÓPICA EM ONCOLOGIA" },
+  { code: "04.16.05.001-8", description: "AMPUTAÇÃO ABDOMINO-PERINEAL DE RETO EM ONCOLOGIA" },
+  { code: "04.16.05.002-6", description: "COLECTOMIA PARCIAL (HEMICOLECTOMIA) EM ONCOLOGIA" },
+  { code: "04.16.05.003-4", description: "COLECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.05.004-2", description: "COLOSTOMIA EM ONCOLOGIA" },
+  { code: "04.16.05.005-0", description: "EXCISÃO LOCAL DE TUMOR DO RETO EM ONCOLOGIA" },
+  { code: "04.16.05.006-9", description: "PROCTOCOLECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.05.007-7", description: "RETOSSIGMOIDECTOMIA ABDOMINAL EM ONCOLOGIA" },
+  { code: "04.16.05.008-5", description: "RETOSSIGMOIDECTOMIA ABDOMINO-PERINEAL EM ONCOLOGIA" },
+  { code: "04.16.05.009-3", description: "EXENTERAÇÃO PÉLVICA POSTERIOR EM ONCOLOGIA" },
+  { code: "04.16.05.010-7", description: "EXENTERAÇÃO PÉLVICA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.05.011-5", description: "PROCTOCOLECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.05.012-3", description: "COLECTOMIA VIDEOLAPAROSCÓPICA EM ONCOLOGIA" },
+  { code: "04.16.06.001-3", description: "AMPUTACAO CONICA DO COLO DO UTERO EM ONCOLOGIA" },
+  { code: "04.16.06.002-1", description: "ANEXECTOMIA UNI / BILATERAL EM ONCOLOGIA" },
+  { code: "04.16.06.003-0", description: "COLPECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.06.004-8", description: "HISTERECTOMIA C/ ANEXECTOMIA (UNI / BILATERAL) EM ONCOLOGIA" },
+  { code: "04.16.06.005-6", description: "HISTERECTOMIA COM RESSECÇÃO DE ÓRGÃOS CONTÍGUOS EM ONCOLOGIA" },
+  { code: "04.16.06.006-4", description: "HISTERECTOMIA TOTAL AMPLIADA EM ONCOLOGIA" },
+  { code: "04.16.06.007-2", description: "HISTERECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.06.008-0", description: "TRAQUELECTOMIA RADICAL EM ONCOLOGIA" },
+  { code: "04.16.06.009-9", description: "VULVECTOMIA TOTAL AMPLIADA C/ LINFADENECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.06.010-2", description: "VULVECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.06.011-0", description: "HISTERECTOMIA COM OU SEM ANEXECTOMIA (UNI / BILATERAL) EM ONCOLOGIA" },
+  { code: "04.16.06.012-9", description: "LAPAROTOMIA PARA AVALIAÇÃO DE TUMOR DE OVÁRIO EM ONCOLOGIA" },
+  { code: "04.16.06.013-7", description: "HISTERECTOMIA VIDEOLAPAROSCÓPICA CO OU SEM ANEXECTOMIA (UNI/BILATERAL) EM ONCOLOGIA" },
+  { code: "04.16.07.001-9", description: "PARACENTESE DE CAMARA ANTERIOR EM ONCOLOGIA" },
+  { code: "04.16.07.002-7", description: "RESSECCAO DE ESCLERA EM ONCOLOGIA" },
+  { code: "04.16.07.003-5", description: "TRATAMENTO DE NEOPLASIA DA ORBITA POR TUMOR" },
+  { code: "04.16.08.001-4", description: "EXCISÂO E ENXERTO DE PELE EM ONCOLOGIA" },
+  { code: "04.16.08.002-2", description: "EXCISAO E RECONSTRUCAO TOTAL DE LABIO EM ONCOLOGIA" },
+  { code: "04.16.08.003-0", description: "EXCISÃO E SUTURA DE LESÃO NA PELE COM PLASTICA EM Z OU ROTAÇÃO DE RETALHO EM ONCOLOGIA" },
+  { code: "04.16.08.004-9", description: "EXCISAO EM CUNHA DE LABIO E SUTURA EM ONCOLOGIA" },
+  { code: "04.16.08.005-7", description: "EXCISAO PARCIAL DE LABIO C/ ENXERTO LIVRE EM ONCOLOGIA" },
+  { code: "04.16.08.006-5", description: "EXTIRPACAO E SUPRESSAO MULTIPLA DE LESAO DA PELE E TECIDO CELULAR SUBCUTANEO EM ONCOLOGIA" },
+  { code: "04.16.08.007-3", description: "MAXILECTOMIA C/ OU S/ ESVAZIAMENTO ORBITARIO EM ONCOLOGIA" },
+  { code: "04.16.08.008-1", description: "RECONSTRUÇÃO COM RETALHO MIOCUTÂNEO (QUALQUER PARTE) EM ONCOLOGIA" },
+  { code: "04.16.08.009-0", description: "RECONSTRUÇÃO POR MICROCIRURGIA (QUALQUER PARTE) EM ONCOLOGIA" },
+  { code: "04.16.08.010-3", description: "RESSECCAO AMPLIADA DE TUMORES DE PARTES MOLES EM ONCOLOGIA" },
+  { code: "04.16.08.011-1", description: "RECONSTRUÇÃO COM RETALHO OSTEOMIOCUTÂNEO EM ONCOLOGIA" },
+  { code: "04.16.08.012-0", description: "EXTIRPAÇÃO MÚLTIPLA DE LESÃO DA PELE OU TECIDO CELULAR SUBCUTÂNEO EM ONCOLOGIA" },
+  { code: "04.16.09.001-0", description: "AMPUTAÇÃO / DESARTICULAÇÃO DE MEMBROS INFERIORES EM ONCOLOGIA" },
+  { code: "04.16.09.002-8", description: "AMPUTAÇÃO / DESARTICULAÇÃO DE MEMBROS SUPERIORES EM ONCOLOGIA" },
+  { code: "04.16.09.003-6", description: "HEMIPELVECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.09.004-4", description: "DESARTICULACAO INTERESCAPULO-MAMO-TORACICA EM ONCOLOGIA" },
+  { code: "04.16.09.005-2", description: "DESARTICULACAO INTERESCAPULO-TORACICA EM ONCOLOGIA" },
+  { code: "04.16.09.006-0", description: "RESSECCAO DE PARTES MOLES DAS EXTREMIDADES C/ RECONSTRUCAO EM ONCOLOGIA" },
+  { code: "04.16.09.007-9", description: "SACRALECTOMIA (ENDOPELVECTOMIA) EM ONCOLOGIA" },
+  { code: "04.16.09.008-7", description: "RESSECCAO DE TUMOR E RECONSTRUCAO C/ ENXERTO EM ONCOLOGIA" },
+  { code: "04.16.09.009-5", description: "RESSECCAO DE TUMOR MALIGNO DO OSSO TEMPORAL EM ONCOLOGIA" },
+  { code: "04.16.09.010-9", description: "RESSECÇÃO DE TUMOR ÓSSEO COM SUBSTITUIÇÃO (ENDOPRÓTESE) OU COM RECONSTRUÇÃO E FIXAÇÃO EM ONCOLOGIA" },
+  { code: "04.16.09.011-7", description: "DESARTICULAÇÃO INTERESCAPULO-TORÁCICA EM ONCOLOGIA" },
+  { code: "04.16.09.012-5", description: "DESARTICULAÇÃO ESCAPULO-TORÁCICA INTERNA EM ONCOLOGIA" },
+  { code: "04.16.09.013-3", description: "RESSECÇÃO DE TUMOR DE PARTES MOLES EM ONCOLOGIA" },
+  { code: "04.16.11.001-0", description: "LOBECTOMIA PULMONAR EM ONCOLOGIA" },
+  { code: "04.16.11.002-9", description: "PNEUMOMECTOMIA RADICAL EM ONCOLOGIA" },
+  { code: "04.16.11.003-7", description: "TORATECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.11.004-5", description: "TORACECTOMIA SIMPLES EM ONCOLOGIA" },
+  { code: "04.16.11.005-3", description: "TORACOTOMIA/MEDIASTINOSTOMIA EXPLORADORA COM RESSECÇÃO COMPLETA OU INCOMPLETA DO TUMOR INTRATORÁCICO EM ONCOLOGIA" },
+  { code: "04.16.11.006-1", description: "SEGMENTECTOMIA PULMONAR EM ONCOLOGIA" },
+  { code: "04.16.11.007-0", description: "RESSECÇAO PULMONAR EM CUNHA EM ONCOLOGIA" },
+  { code: "04.16.11.008-8", description: "TIMECTOMIA EM ONCOLOGIA" },
+  { code: "04.16.12.001-6", description: "EXTIRPACAO DE MAMILO EM ONCOLOGIA" },
+  { code: "04.16.12.002-4", description: "MASTECTOMIA RADICAL COM LINFADENECTOMIA AXILAR EM ONCOLOGIA" },
+  { code: "04.16.12.003-2", description: "MASTECTOMIA SIMPLES EM ONCOLOGIA" },
+  { code: "04.16.12.004-0", description: "RESSECÇÃO DE LESÃO NÃO PALPÁVEL DE MAMA COM MARCAÇÃO EM ONCOLOGIA (POR MAMA)" },
+  { code: "04.16.12.005-9", description: "SEGMENTECTOMIA/QUADRANTECTOMIA/SETORECTOMIA DE MAMA EM ONCOLOGIA" },
+  { code: "04.16.13.001-1", description: "EXTIRPACAO DE TUMOR DA FARINGE EM ONCOLOGIA" },
+  { code: "04.16.13.002-0", description: "EXTIRPACAO DE TUMOR DO CAVUM EM ONCOLOGIA" },
+  { code: "04.16.13.003-8", description: "LARINGECTOMIA PARCIAL EM ONCOLOGIA" },
+  { code: "04.16.13.004-6", description: "LARINGECTOMIA TOTAL C/ ESVAZIAMENTO CERVICAL EM ONCOLOGIA" },
+  { code: "04.16.13.005-4", description: "LARINGECTOMIA TOTAL EM ONCOLOGIA" },
+  { code: "04.16.13.006-2", description: "MANDIBULECTOMIA PELVI-GLOSO EM ONCOLOGIA" }
+];
+
+const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9\s]/g, "");
+
+// Pre-calculate normalized words for all procedures to improve performance
+const PRECALCULATED_PROCEDURES = PROCEDURES.map(proc => ({
+  ...proc,
+  words: new Set(normalize(proc.description).split(/\s+/).filter(w => w.length > 2))
+}));
+
+export function findBestProcedure(surgeryType: string): { code: string, description: string } {
+  if (!surgeryType) return { code: '', description: '' };
+  
+  const targetWords = new Set(normalize(surgeryType).split(/\s+/).filter(w => w.length > 2));
+  
+  let bestMatch = { code: '', description: '' };
+  let bestScore = 0;
+  
+  for (const proc of PRECALCULATED_PROCEDURES) {
+    let intersection = 0;
+    for (const word of targetWords) {
+      if (proc.words.has(word)) intersection++;
+    }
+    
+    const union = targetWords.size + proc.words.size - intersection;
+    const score = union === 0 ? 0 : intersection / union;
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMatch = { code: proc.code, description: proc.description };
+    }
+  }
+  
+  // If no good match, return the original surgeryType as description and empty code
+  if (bestScore < 0.1) {
+    return { code: '', description: surgeryType };
+  }
+  
+  return bestMatch;
+}
