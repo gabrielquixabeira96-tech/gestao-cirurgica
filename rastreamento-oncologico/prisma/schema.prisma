@@ -1,0 +1,74 @@
+// Prisma Schema — Rastreamento Oncológico em Massa
+// Documentação: https://pris.ly/d/prisma-schema
+//
+// NOTA (Prisma 7+): A URL do datasource foi movida para prisma.config.ts
+// Referência: https://pris.ly/d/config-datasource
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // URL definida em prisma.config.ts (padrão Prisma 7)
+}
+
+// Enum para sexo biológico
+enum SexoBiologico {
+  MASCULINO
+  FEMININO
+}
+
+// ============================================================
+// Tabela: pacientes
+// Armazena os dados anonimizados dos pacientes cadastrados
+// ============================================================
+model pacientes {
+  id             String        @id @default(uuid()) @db.Uuid
+  whatsapp_hash  String        @unique // SHA-256 do número de WhatsApp
+  idade          Int
+  sexo_biologico SexoBiologico
+  data_cadastro  DateTime      @default(now())
+
+  // Relacionamentos
+  respostas     respostas_questionario[]
+  rastreamentos rastreamentos_gerados[]
+
+  @@map("pacientes")
+}
+
+// ============================================================
+// Tabela: respostas_questionario
+// Armazena as respostas individuais do questionário de risco
+// ============================================================
+model respostas_questionario {
+  id             String @id @default(uuid()) @db.Uuid
+  paciente_id    String @db.Uuid
+  chave_pergunta String // ex: "historico_tabagismo", "imc_acima_30"
+  valor_resposta String // ex: "sim", "nao", "20_anos"
+
+  // Relacionamento com pacientes
+  paciente pacientes @relation(fields: [paciente_id], references: [id], onDelete: Cascade)
+
+  @@index([paciente_id])
+  @@map("respostas_questionario")
+}
+
+// ============================================================
+// Tabela: rastreamentos_gerados
+// Armazena os rastreamentos oncológicos gerados para cada paciente
+// ============================================================
+model rastreamentos_gerados {
+  id               String   @id @default(uuid()) @db.Uuid
+  paciente_id      String   @db.Uuid
+  tipo_cancer      String   // ex: "PULMONAR", "COLORRETAL", "MAMA", "CERVICAL"
+  criterio_clinico String   // Justificativa clínica detalhada
+  data_geracao     DateTime @default(now())
+
+  // Relacionamento com pacientes
+  paciente pacientes @relation(fields: [paciente_id], references: [id], onDelete: Cascade)
+
+  @@index([paciente_id])
+  @@index([tipo_cancer])
+  @@map("rastreamentos_gerados")
+}
