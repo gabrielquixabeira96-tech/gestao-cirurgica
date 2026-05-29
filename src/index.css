@@ -1,0 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "EB Garamond", serif;
+  /* Mayo Clinic Inspired Palette */
+  --color-mayo-blue: #004b87;
+  --color-mayo-green: #006b54;
+  --color-bg-light: #f8fafc;
+}
+
+body {
+  background-color: var(--color-bg-light);
+  color: #1e293b;
+  font-family: var(--font-serif);
+}
