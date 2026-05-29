@@ -1,0 +1,253 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Design System — Rastreamento Oncológico em Massa
+   ============================================================ */
+
+:root {
+  --font-inter: 'Inter', sans-serif;
+
+  /* Paleta de cores */
+  --color-bg-primary: #0a0f1e;
+  --color-bg-secondary: #0d1b2a;
+  --color-bg-card: rgba(255, 255, 255, 0.04);
+  --color-bg-card-hover: rgba(255, 255, 255, 0.07);
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-hover: rgba(255, 255, 255, 0.16);
+
+  /* Gradientes de acento */
+  --gradient-teal: linear-gradient(135deg, #0ed2f7 0%, #00b4d8 100%);
+  --gradient-coral: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+  --gradient-purple: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  --gradient-green: linear-gradient(135deg, #22d3ee 0%, #10b981 100%);
+  --gradient-hero: linear-gradient(135deg, #0a0f1e 0%, #0d1b2a 50%, #0a1628 100%);
+
+  /* Texto */
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #475569;
+
+  /* Animações */
+  --transition-base: 0.2s ease;
+  --transition-smooth: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   Reset e Base
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   Utilitários de fundo com blur (glassmorphism)
+   ============================================================ */
+
+.glass-card {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 16px;
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), transform var(--transition-smooth);
+}
+
+.glass-card:hover {
+  background: var(--color-bg-card-hover);
+  border-color: var(--color-border-hover);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   Animações
+   ============================================================ */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 16px rgba(14, 210, 247, 0.3); }
+  50% { opacity: 0.8; box-shadow: 0 0 32px rgba(14, 210, 247, 0.6); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes rotate-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease both;
+}
+
+.animate-fade-in-up-delay-1 {
+  animation: fadeInUp 0.6s ease 0.1s both;
+}
+
+.animate-fade-in-up-delay-2 {
+  animation: fadeInUp 0.6s ease 0.2s both;
+}
+
+.animate-fade-in-up-delay-3 {
+  animation: fadeInUp 0.6s ease 0.3s both;
+}
+
+.animate-fade-in-up-delay-4 {
+  animation: fadeInUp 0.6s ease 0.4s both;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   Gradientes de texto
+   ============================================================ */
+
+.text-gradient-teal {
+  background: var(--gradient-teal);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-coral {
+  background: var(--gradient-coral);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-hero {
+  background: linear-gradient(135deg, #f1f5f9 0%, #0ed2f7 50%, #a855f7 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================================
+   Botões
+   ============================================================ */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--gradient-teal);
+  color: #0a0f1e;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(14, 210, 247, 0.4);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-hover);
+  cursor: pointer;
+  transition: background var(--transition-smooth), border-color var(--transition-smooth), transform var(--transition-smooth);
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-card-hover);
+  border-color: rgba(14, 210, 247, 0.4);
+  transform: translateY(-2px);
+}
+
+/* ============================================================
+   Status Badge
+   ============================================================ */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.status-badge.ok {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.status-badge.degraded {
+  background: rgba(249, 115, 22, 0.15);
+  color: #f97316;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+}
+
+/* ============================================================
+   Scrollbar customizada
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(14, 210, 247, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(14, 210, 247, 0.5);
+}
