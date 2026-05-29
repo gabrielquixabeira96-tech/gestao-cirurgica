@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# SQLite (server-side only, not used in Netlify deployment)
+*.db
+*.db-journal
+
+# Temp / dev scripts (not part of the app)
+check_*.js
+fetch_*.js
+fetch_*.cjs
+fix_*.js
+import_*.js
+replace*.cjs
+test_*.js
+test_*.ts
+test*.ts
+test*.cjs
+temp.txt
+gilmar*.csv
+mara.csv
+
+# Legacy server-side files (not used in Netlify deployment)
+server.ts
+GAS_CODE.md
+metadata.json
+
+# Legacy public documents (kept locally, not deployed)
+public/
